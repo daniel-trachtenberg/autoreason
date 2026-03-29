@@ -8,9 +8,18 @@ from dataclasses import dataclass
 class ApiConfig:
     base_url: str
     api_key: str
-    model: str
+    model: str = ""
     timeout_seconds: float = 120.0
     max_retries: int = 5
+
+    def with_model(self, model: str) -> "ApiConfig":
+        return ApiConfig(
+            base_url=self.base_url,
+            api_key=self.api_key,
+            model=model,
+            timeout_seconds=self.timeout_seconds,
+            max_retries=self.max_retries,
+        )
 
 
 def load_api_config_from_env() -> ApiConfig:
@@ -20,14 +29,8 @@ def load_api_config_from_env() -> ApiConfig:
     timeout_seconds = float(os.environ.get("AUTOREASON_TIMEOUT_SECONDS", "120"))
     max_retries = int(os.environ.get("AUTOREASON_MAX_RETRIES", "5"))
 
-    missing = []
     if not api_key:
-        missing.append("AUTOREASON_API_KEY")
-    if not model:
-        missing.append("AUTOREASON_MODEL")
-    if missing:
-        joined = ", ".join(missing)
-        raise ValueError(f"Missing required environment variable(s): {joined}")
+        raise ValueError("Missing required environment variable: AUTOREASON_API_KEY")
 
     return ApiConfig(
         base_url=base_url,

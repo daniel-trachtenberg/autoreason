@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
@@ -95,6 +95,10 @@ class RunConfig:
     max_context_chars: int = 12_000
     temperature: float = 0.3
     program_path: str = "program.md"
+    llm_mode: str = "single"
+    council_models: list[str] = field(default_factory=list)
+    council_chairman_model: str = ""
+    council_workers: int = 4
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -112,6 +116,10 @@ class RunConfig:
             max_context_chars=max(2_000, _int_value(data.get("max_context_chars"), 12_000)),
             temperature=_float_value(data.get("temperature"), 0.3),
             program_path=str(data.get("program_path") or "program.md"),
+            llm_mode=str(data.get("llm_mode") or "single"),
+            council_models=_string_list(data.get("council_models")),
+            council_chairman_model=str(data.get("council_chairman_model") or ""),
+            council_workers=max(1, _int_value(data.get("council_workers"), 4)),
         )
 
 
