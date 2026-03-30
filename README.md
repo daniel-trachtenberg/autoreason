@@ -17,6 +17,7 @@ The design is inspired by [karpathy/autoresearch](https://github.com/karpathy/au
 - Long-running sessions with round limits, time limits, or both
 - Generic OpenAI-compatible API client, so you can point it at OpenAI or another compatible backend
 - Optional `llm-council`-style multi-model mode with peer ranking and chairman synthesis
+- Optional Next.js web UI in `frontend/`, without replacing the CLI
 - Zero third-party Python dependencies
 - Optional URL ingestion for HTML news articles
 
@@ -83,6 +84,16 @@ Resume a previous run:
 ```bash
 autoreason resume ./runs/20260328-203000-market-tariffs
 ```
+
+Run the web UI:
+
+```bash
+cd frontend
+npm run dev
+```
+
+The frontend launches the same Python CLI under the hood and reads from the same `./runs` directory.
+Its dev script is pinned to webpack for local stability, while production builds still use the standard Next.js build pipeline.
 
 ## CLI
 
