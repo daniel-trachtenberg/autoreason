@@ -7,3 +7,5 @@ build/
 dist/
 *.egg-info/
 runs/
+!frontend/app/runs/
+!frontend/app/runs/**

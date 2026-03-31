@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "autoreason UI",
-  description: "A lightweight control room for launching and inspecting autoreason runs.",
+  title: "autoreason",
+  description: "Minimal web UI for launching article reasoning runs and comparing the final cases.",
 };
 
 export default function RootLayout({

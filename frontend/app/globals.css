@@ -1,14 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3efe7;
-  --foreground: #1d1b18;
-  --muted: #6d665d;
-  --line: rgba(68, 61, 53, 0.12);
-  --accent: #2d6a5f;
-  --accent-strong: #1e4c44;
-  --accent-soft: #dff1eb;
-  --accent-warm: #8f552e;
+  --background: #f6f6f3;
+  --foreground: #111111;
+  --muted: #626262;
+  --line: rgba(17, 17, 17, 0.08);
 }
 
 @theme inline {
@@ -29,9 +25,8 @@ html {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(209, 228, 221, 0.85), transparent 36%),
-    radial-gradient(circle at top right, rgba(245, 214, 174, 0.5), transparent 28%),
-    linear-gradient(180deg, #fbf9f5 0%, #f3efe7 100%);
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.92), transparent 36%),
+    linear-gradient(180deg, #fafaf8 0%, #f6f6f3 100%);
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
 }
@@ -45,15 +40,23 @@ textarea {
 }
 
 ::selection {
-  background: rgba(45, 106, 95, 0.16);
+  background: rgba(17, 17, 17, 0.12);
 }
 
-.panel {
+.report-text {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.result-panel {
   border: 1px solid var(--line);
-  background: rgba(255, 251, 246, 0.74);
-  backdrop-filter: blur(20px);
-  border-radius: 32px;
-  box-shadow:
-    0 24px 80px rgba(67, 57, 47, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 2rem;
+  padding: 2rem;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.06);
+}
+
+@media (min-width: 640px) {
+  .result-panel {
+    padding: 2.5rem;
+  }
 }

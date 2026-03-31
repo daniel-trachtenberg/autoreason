@@ -1,17 +1,18 @@
 export type LlmMode = "single" | "council";
 
 export type LaunchRunRequest = {
-  newsText: string;
+  articleUrl?: string;
+  newsText?: string;
   thesisHint?: string;
-  recursiveDepth: number;
-  maxRounds: number;
+  recursiveDepth?: number;
+  maxRounds?: number;
   maxMinutes?: number | null;
-  judgeEvery: number;
-  pauseSeconds: number;
+  judgeEvery?: number;
+  pauseSeconds?: number;
   llmMode: LlmMode;
-  councilModels: string[];
+  councilModels?: string[];
   councilChairmanModel?: string;
-  councilWorkers: number;
+  councilWorkers?: number;
 };
 
 export type RunStatus = "idle" | "launching" | "running" | "completed" | "failed";
