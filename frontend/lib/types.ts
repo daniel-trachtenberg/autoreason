@@ -3,6 +3,8 @@ export type LlmMode = "single" | "council";
 export type LaunchRunRequest = {
   articleUrl?: string;
   newsText?: string;
+  model?: string;
+  apiKey?: string;
   thesisHint?: string;
   recursiveDepth?: number;
   maxRounds?: number;
@@ -30,6 +32,7 @@ export type RunSummary = {
   id: string;
   issue: string;
   sourceLabel: string;
+  modelLabel?: string;
   roundNumber: number;
   updatedAt: string;
   status: RunStatus;

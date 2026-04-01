@@ -94,6 +94,7 @@ npm run dev
 
 The frontend launches the same Python CLI under the hood and reads from the same `./runs` directory.
 Its dev script is pinned to webpack for local stability, while production builds still use the standard Next.js build pipeline.
+The landing page also includes a minimal settings tab where users can choose a model, switch between single-model and council mode, and provide a session-scoped API key from the browser.
 
 ## CLI
 

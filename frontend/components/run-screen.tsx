@@ -38,6 +38,11 @@ function summaryText(detail: RunDetail | null) {
   return `Round ${Math.max(detail.roundNumber, 0)} in progress.`;
 }
 
+function modeSummary(detail: RunDetail | null) {
+  const modeLabel = detail?.llmMode === "council" ? "council" : "single model";
+  return detail?.modelLabel ? `${modeLabel} · ${detail.modelLabel}` : modeLabel;
+}
+
 function ArgumentPanel({
   label,
   title,
@@ -158,9 +163,7 @@ export function RunScreen({ runId }: { runId: string }) {
             autoreason
           </Link>
           <div className="text-right">
-            <p className="text-[11px] uppercase tracking-[0.32em] text-foreground/28">
-              {detail.llmMode === "council" ? "council" : "single model"}
-            </p>
+            <p className="text-[11px] tracking-[0.18em] text-foreground/28">{modeSummary(detail)}</p>
             <p className="mt-2 text-sm text-foreground/44">{formatTimestamp(detail.updatedAt)}</p>
           </div>
         </header>
@@ -187,9 +190,7 @@ export function RunScreen({ runId }: { runId: string }) {
           autoreason
         </Link>
         <div className="text-right">
-          <p className="text-[11px] uppercase tracking-[0.32em] text-foreground/28">
-            {detail?.llmMode === "council" ? "council" : "single model"}
-          </p>
+          <p className="text-[11px] tracking-[0.18em] text-foreground/28">{modeSummary(detail)}</p>
           <p className="mt-2 text-sm text-foreground/44">{statusLabel(detail)}</p>
         </div>
       </header>

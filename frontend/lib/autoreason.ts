@@ -25,6 +25,7 @@ type WebRunState = {
   completedAt?: string;
   pid?: number;
   sourceLabel?: string;
+  modelLabel?: string;
   commandPreview: string;
   error?: string;
   exitCode?: number | null;
@@ -42,6 +43,8 @@ const DEFAULT_COUNCIL_WORKERS = 4;
 type ResolvedLaunchRunRequest = {
   articleUrl?: string;
   newsText?: string;
+  model?: string;
+  apiKey?: string;
   thesisHint?: string;
   recursiveDepth: number;
   maxRounds: number;
@@ -99,9 +102,13 @@ function buildPythonPath() {
 }
 
 function resolveLaunchRequest(request: LaunchRunRequest): ResolvedLaunchRunRequest {
+  const selectedModel = request.model?.trim() || "";
+
   return {
     articleUrl: request.articleUrl?.trim() || undefined,
     newsText: request.newsText?.trim() || undefined,
+    model: selectedModel || process.env.AUTOREASON_MODEL || undefined,
+    apiKey: request.apiKey?.trim() || process.env.AUTOREASON_API_KEY || undefined,
     thesisHint: request.thesisHint?.trim() || undefined,
     recursiveDepth: Math.max(1, request.recursiveDepth ?? DEFAULT_RECURSIVE_DEPTH),
     maxRounds: Math.max(0, request.maxRounds ?? DEFAULT_MAX_ROUNDS),
@@ -115,7 +122,10 @@ function resolveLaunchRequest(request: LaunchRunRequest): ResolvedLaunchRunReque
         : process.env.AUTOREASON_COUNCIL_MODELS,
     ),
     councilChairmanModel:
-      request.councilChairmanModel?.trim() || process.env.AUTOREASON_COUNCIL_CHAIRMAN_MODEL || undefined,
+      request.councilChairmanModel?.trim() ||
+      (request.llmMode === "council" ? selectedModel : "") ||
+      process.env.AUTOREASON_COUNCIL_CHAIRMAN_MODEL ||
+      undefined,
     councilWorkers: Math.max(
       1,
       request.councilWorkers ?? Number(process.env.AUTOREASON_COUNCIL_WORKERS || DEFAULT_COUNCIL_WORKERS),
@@ -225,6 +235,7 @@ function buildRunCommand(runDir: string, request: ResolvedLaunchRunRequest) {
 
   const commandPreview = [
     `PYTHONPATH=${shellEscape(buildPythonPath())}`,
+    ...(request.model ? [`AUTOREASON_MODEL=${shellEscape(request.model)}`] : []),
     pythonBin,
     ...args.map(shellEscape),
   ].join(" ");
@@ -243,6 +254,7 @@ async function readSummaryFromRun(runId: string): Promise<RunSummary> {
     id: runId,
     issue: checkpoint?.issue || "Bootstrapping issue statement",
     sourceLabel: checkpoint?.source_label || webState?.sourceLabel || "",
+    modelLabel: webState?.modelLabel || "",
     roundNumber: Number(checkpoint?.round_number || 0),
     updatedAt: checkpoint?.updated_at || webState?.updatedAt || webState?.launchedAt || "",
     status: webState?.status || (checkpoint ? "completed" : "idle"),
@@ -271,6 +283,7 @@ export async function readRunDetail(runId: string): Promise<RunDetail> {
     id: runId,
     issue: checkpoint?.issue || "Bootstrapping issue statement",
     sourceLabel: checkpoint?.source_label || webState?.sourceLabel || "",
+    modelLabel: webState?.modelLabel || "",
     roundNumber: Number(checkpoint?.round_number || 0),
     updatedAt: checkpoint?.updated_at || webState?.updatedAt || "",
     createdAt: checkpoint?.created_at || webState?.launchedAt || "",
@@ -302,15 +315,25 @@ export async function launchRun(request: LaunchRunRequest) {
     status: "launching",
     launchedAt: new Date().toISOString(),
     sourceLabel: resolved.articleUrl,
+    modelLabel: resolved.model,
     commandPreview,
   });
 
+  const childEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    PYTHONPATH: buildPythonPath(),
+  };
+
+  if (resolved.apiKey) {
+    childEnv.AUTOREASON_API_KEY = resolved.apiKey;
+  }
+  if (resolved.model) {
+    childEnv.AUTOREASON_MODEL = resolved.model;
+  }
+
   const child = spawn(pythonBin, args, {
     cwd: repoRoot,
-    env: {
-      ...process.env,
-      PYTHONPATH: buildPythonPath(),
-    },
+    env: childEnv,
     stdio: "ignore",
   });
 
