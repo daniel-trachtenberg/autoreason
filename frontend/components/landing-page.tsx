@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { LaunchRunRequest, LlmMode } from "@/lib/types";
@@ -13,11 +13,6 @@ const MODES: Array<{ value: LlmMode; label: string }> = [
   { value: "council", label: "council" },
 ];
 
-const HOME_TABS = [
-  { value: "start", label: "start" },
-  { value: "settings", label: "settings" },
-] as const;
-
 const MODEL_OPTIONS = [
   { value: "default", label: "System default" },
   { value: "gpt-5", label: "GPT-5" },
@@ -26,8 +21,6 @@ const MODEL_OPTIONS = [
   { value: "o4-mini", label: "o4-mini" },
   { value: "custom", label: "Custom model" },
 ] as const;
-
-type HomeTab = (typeof HOME_TABS)[number]["value"];
 
 function isValidUrl(value: string) {
   try {
@@ -38,17 +31,37 @@ function isValidUrl(value: string) {
   }
 }
 
+function SettingsIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-[18px] w-[18px]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="3.25" />
+      <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.7-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.7 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2h.1a1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .7.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1v.1a1 1 0 0 0 .9.6h.2a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.7Z" />
+    </svg>
+  );
+}
+
 export function LandingPage() {
   const router = useRouter();
   const [articleUrl, setArticleUrl] = useState("");
-  const [homeTab, setHomeTab] = useState<HomeTab>("start");
   const [llmMode, setLlmMode] = useState<LlmMode>("single");
   const [selectedModel, setSelectedModel] = useState<(typeof MODEL_OPTIONS)[number]["value"]>("default");
   const [customModel, setCustomModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLaunching, setIsLaunching] = useState(false);
+  const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const settingsPanelRef = useRef<HTMLDivElement | null>(null);
 
   const resolvedModel =
     selectedModel === "custom"
@@ -56,6 +69,7 @@ export function LandingPage() {
       : selectedModel === "default"
         ? ""
         : selectedModel;
+  const hasCustomSettings = Boolean(resolvedModel || apiKey.trim());
 
   useEffect(() => {
     try {
@@ -108,6 +122,34 @@ export function LandingPage() {
     }
   }, [selectedModel, customModel, apiKey]);
 
+  useEffect(() => {
+    if (!settingsOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (
+        target &&
+        !settingsPanelRef.current?.contains(target) &&
+        !settingsButtonRef.current?.contains(target)
+      ) {
+        setSettingsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSettingsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [settingsOpen]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedUrl = articleUrl.trim();
@@ -123,7 +165,7 @@ export function LandingPage() {
       return;
     }
     if (selectedModel === "custom" && !resolvedModel) {
-      setHomeTab("settings");
+      setSettingsOpen(true);
       setErrorMessage("Add a custom model ID in settings before starting.");
       return;
     }
@@ -163,176 +205,172 @@ export function LandingPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6">
       <div className="w-full max-w-4xl">
+        <div className="fixed right-4 top-4 z-30 sm:right-6 sm:top-6">
+          <button
+            ref={settingsButtonRef}
+            type="button"
+            onClick={() => {
+              setSettingsOpen((current) => !current);
+              setErrorMessage("");
+            }}
+            className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-foreground/10 bg-white/88 text-foreground/44 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm hover:text-foreground"
+            aria-label="Open settings"
+            aria-expanded={settingsOpen}
+          >
+            <SettingsIcon />
+            {hasCustomSettings ? (
+              <span className="absolute right-[0.82rem] top-[0.82rem] h-1.5 w-1.5 rounded-full bg-foreground" />
+            ) : null}
+          </button>
+
+          {settingsOpen ? (
+            <div
+              ref={settingsPanelRef}
+              className="absolute right-0 top-12 w-[min(24rem,calc(100vw-2rem))] rounded-[1.75rem] border border-foreground/10 bg-white/94 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:w-[24rem] sm:p-6"
+            >
+              <div className="space-y-2">
+                <p className="text-[11px] uppercase tracking-[0.34em] text-foreground/32">settings</p>
+                <p className="max-w-sm text-sm leading-7 text-foreground/54">
+                  Choose the model for single runs and add your own API key. Model preferences are
+                  saved in this browser, while the key stays with this session and is never written
+                  into the run files.
+                </p>
+              </div>
+
+              <div className="mt-6 space-y-5">
+                <label className="block space-y-3">
+                  <span className="text-sm text-foreground/54">Model</span>
+                  <select
+                    value={selectedModel}
+                    onChange={(event) =>
+                      setSelectedModel(event.target.value as (typeof MODEL_OPTIONS)[number]["value"])
+                    }
+                    className="w-full rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3 text-base text-foreground outline-none focus:border-foreground/30"
+                  >
+                    {MODEL_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {selectedModel === "custom" ? (
+                  <label className="block space-y-3">
+                    <span className="text-sm text-foreground/54">Custom model ID</span>
+                    <input
+                      type="text"
+                      value={customModel}
+                      onChange={(event) => setCustomModel(event.target.value)}
+                      placeholder="gpt-5 or anthropic/claude-sonnet-4"
+                      className="w-full rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3 text-base text-foreground outline-none placeholder:text-foreground/24 focus:border-foreground/30"
+                    />
+                  </label>
+                ) : null}
+
+                <label className="block space-y-3">
+                  <span className="text-sm text-foreground/54">API key</span>
+                  <div className="flex items-center gap-3 rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      value={apiKey}
+                      onChange={(event) => setApiKey(event.target.value)}
+                      placeholder="sk-..."
+                      className="w-full border-none bg-transparent text-base text-foreground outline-none placeholder:text-foreground/24"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey((current) => !current)}
+                      className="text-sm text-foreground/42 hover:text-foreground"
+                    >
+                      {showApiKey ? "hide" : "show"}
+                    </button>
+                  </div>
+                </label>
+
+                <div className="flex items-center justify-between gap-4 border-t border-foreground/8 pt-5 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedModel("default");
+                      setCustomModel("");
+                      setApiKey("");
+                      setShowApiKey(false);
+                      setErrorMessage("");
+                    }}
+                    className="rounded-full border border-foreground/10 px-4 py-2 text-foreground/58 hover:text-foreground"
+                  >
+                    clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSettingsOpen(false)}
+                    className="rounded-full bg-foreground px-4 py-2 text-background"
+                  >
+                    done
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
         <div className="mb-8 text-center">
           <p className="text-2xl font-medium tracking-[0.26em] text-foreground/48 uppercase sm:text-3xl">
             autoreason
           </p>
         </div>
 
-        <div className="mb-8 flex justify-center">
-          <div className="flex items-center gap-1 rounded-full border border-foreground/10 bg-white/80 p-1 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-            {HOME_TABS.map((tab) => {
-              const active = tab.value === homeTab;
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="mx-auto flex w-fit items-center gap-1 rounded-full border border-foreground/10 bg-white/80 p-1 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
+            {MODES.map((mode) => {
+              const active = mode.value === llmMode;
               return (
                 <button
-                  key={tab.value}
+                  key={mode.value}
                   type="button"
-                  onClick={() => {
-                    setHomeTab(tab.value);
-                    setErrorMessage("");
-                  }}
+                  onClick={() => setLlmMode(mode.value)}
                   className={`rounded-full px-4 py-2 text-sm ${
                     active
                       ? "bg-foreground text-background shadow-sm"
                       : "text-foreground/56 hover:text-foreground"
                   }`}
                 >
-                  {tab.label}
+                  {mode.label}
                 </button>
               );
             })}
           </div>
-        </div>
 
-        {homeTab === "start" ? (
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div className="mx-auto flex w-fit items-center gap-1 rounded-full border border-foreground/10 bg-white/80 p-1 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-              {MODES.map((mode) => {
-                const active = mode.value === llmMode;
-                return (
-                  <button
-                    key={mode.value}
-                    type="button"
-                    onClick={() => setLlmMode(mode.value)}
-                    className={`rounded-full px-4 py-2 text-sm ${
-                      active
-                        ? "bg-foreground text-background shadow-sm"
-                        : "text-foreground/56 hover:text-foreground"
-                    }`}
-                  >
-                    {mode.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mx-auto max-w-3xl">
-              <label
-                className={`flex items-center gap-3 rounded-[2rem] border bg-white px-6 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.07)] ${
-                  errorMessage ? "border-rose-300" : "border-foreground/10"
-                }`}
+          <div className="mx-auto max-w-3xl">
+            <label
+              className={`flex items-center gap-3 rounded-[2rem] border bg-white px-6 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.07)] ${
+                errorMessage ? "border-rose-300" : "border-foreground/10"
+              }`}
+            >
+              <input
+                type="url"
+                name="articleUrl"
+                autoComplete="off"
+                autoFocus
+                value={articleUrl}
+                onChange={(event) => setArticleUrl(event.target.value)}
+                placeholder="Paste an article URL"
+                className="w-full border-none bg-transparent text-lg text-foreground outline-none placeholder:text-foreground/28"
+                aria-label="Article URL"
+              />
+              <button
+                type="submit"
+                disabled={isLaunching}
+                className="rounded-full bg-foreground px-4 py-2 text-sm text-background disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <input
-                  type="url"
-                  name="articleUrl"
-                  autoComplete="off"
-                  autoFocus
-                  value={articleUrl}
-                  onChange={(event) => setArticleUrl(event.target.value)}
-                  placeholder="Paste an article URL"
-                  className="w-full border-none bg-transparent text-lg text-foreground outline-none placeholder:text-foreground/28"
-                  aria-label="Article URL"
-                />
-                <button
-                  type="submit"
-                  disabled={isLaunching}
-                  className="rounded-full bg-foreground px-4 py-2 text-sm text-background disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isLaunching ? "starting" : "enter"}
-                </button>
-              </label>
-            </div>
+                {isLaunching ? "starting" : "enter"}
+              </button>
+            </label>
+          </div>
 
-            {resolvedModel || apiKey.trim() ? (
-              <div className="text-center text-sm text-foreground/34">
-                {resolvedModel ? `${resolvedModel}` : "system default model"}
-                {apiKey.trim() ? " · personal API key active" : ""}
-              </div>
-            ) : null}
-
-            {errorMessage ? <p className="text-center text-sm text-rose-500">{errorMessage}</p> : null}
-          </form>
-        ) : (
-          <section className="mx-auto max-w-2xl rounded-[2rem] border border-foreground/10 bg-white/84 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)] sm:p-8">
-            <div className="space-y-2">
-              <p className="text-[11px] uppercase tracking-[0.34em] text-foreground/32">settings</p>
-              <p className="max-w-lg text-sm leading-7 text-foreground/54">
-                Choose the model for single runs and add your own API key. Model preferences are
-                saved in this browser, while the key is kept to this session and forwarded to the
-                Python process without being written into the run files.
-              </p>
-            </div>
-
-            <div className="mt-8 space-y-6">
-              <label className="block space-y-3">
-                <span className="text-sm text-foreground/54">Model</span>
-                <select
-                  value={selectedModel}
-                  onChange={(event) =>
-                    setSelectedModel(event.target.value as (typeof MODEL_OPTIONS)[number]["value"])
-                  }
-                  className="w-full rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3 text-base text-foreground outline-none focus:border-foreground/30"
-                >
-                  {MODEL_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {selectedModel === "custom" ? (
-                <label className="block space-y-3">
-                  <span className="text-sm text-foreground/54">Custom model ID</span>
-                  <input
-                    type="text"
-                    value={customModel}
-                    onChange={(event) => setCustomModel(event.target.value)}
-                    placeholder="gpt-5 or anthropic/claude-sonnet-4"
-                    className="w-full rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3 text-base text-foreground outline-none placeholder:text-foreground/24 focus:border-foreground/30"
-                  />
-                </label>
-              ) : null}
-
-              <label className="block space-y-3">
-                <span className="text-sm text-foreground/54">API key</span>
-                <div className="flex items-center gap-3 rounded-2xl border border-foreground/10 bg-background/70 px-4 py-3">
-                  <input
-                    type={showApiKey ? "text" : "password"}
-                    value={apiKey}
-                    onChange={(event) => setApiKey(event.target.value)}
-                    placeholder="sk-..."
-                    className="w-full border-none bg-transparent text-base text-foreground outline-none placeholder:text-foreground/24"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey((current) => !current)}
-                    className="text-sm text-foreground/42 hover:text-foreground"
-                  >
-                    {showApiKey ? "hide" : "show"}
-                  </button>
-                </div>
-              </label>
-
-              <div className="flex items-center justify-between gap-4 border-t border-foreground/8 pt-5 text-sm">
-                <p className="text-foreground/38">Uses the current server OpenAI-compatible base URL.</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedModel("default");
-                    setCustomModel("");
-                    setApiKey("");
-                    setShowApiKey(false);
-                    setErrorMessage("");
-                  }}
-                  className="rounded-full border border-foreground/10 px-4 py-2 text-foreground/58 hover:text-foreground"
-                >
-                  clear
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
+          {errorMessage ? <p className="text-center text-sm text-rose-500">{errorMessage}</p> : null}
+        </form>
       </div>
     </main>
   );
